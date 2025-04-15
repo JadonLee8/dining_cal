@@ -239,7 +239,7 @@ export default function Home() {
             {days.map((day, index) => (
               <div
                 key={index}
-                className={`p-4 rounded-lg min-h-[120px] cursor-pointer transition-colors backdrop-blur-sm ${
+                className={`p-4 rounded-lg min-h-[120px] cursor-pointer transition-colors backdrop-blur-sm relative ${
                   day === selectedDate
                     ? 'bg-gray-800/30 text-white'
                     : day
@@ -253,15 +253,31 @@ export default function Home() {
                     <div className="font-semibold mb-2">
                       {new Date(day).getUTCDate()}
                     </div>
-                    <div className="text-sm">
-                      {getMenuItems(day).slice(0, 1).map((station, i) => (
-                        <div key={i} className="truncate">
-                          {station.periodName}
+                    <div className="space-y-1 relative z-30">
+                      {getMenuItems(day).map((period, i) => (
+                        <div 
+                          key={i}
+                          className={`text-xs p-1 rounded bg-white/30 backdrop-blur-sm transition-colors cursor-pointer relative group ${
+                            period.periodName.toLowerCase().includes('breakfast') 
+                              ? 'hover:bg-blue-400/50' 
+                              : period.periodName.toLowerCase().includes('lunch')
+                              ? 'hover:bg-green-400/50'
+                              : period.periodName.toLowerCase().includes('dinner')
+                              ? 'hover:bg-purple-400/50'
+                              : 'hover:bg-orange-400/50'
+                          }`}
+                        >
+                          {period.periodName}
+                          <div className="absolute left-0 top-full mt-1 w-48 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-2 text-xs opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100]">
+                            {period.stations.map((station, stationIndex) => (
+                              <div key={stationIndex} className="py-1">
+                                <div className="font-semibold text-gray-700">{station.stationName}</div>
+                                <div className="text-gray-600 truncate">{station.items[0]}</div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       ))}
-                      {getMenuItems(day).length > 1 && (
-                        <div className="text-gray-500">+{getMenuItems(day).length - 1} more stations</div>
-                      )}
                     </div>
                   </>
                 )}
