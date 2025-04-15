@@ -54,6 +54,10 @@ export default function Home() {
   const [selectedLocation, setSelectedLocation] = useState<'SBISA' | 'COMMONS'>('SBISA');
   const [expandedPeriods, setExpandedPeriods] = useState<Set<string>>(new Set());
   const [expandedStations, setExpandedStations] = useState<Set<string>>(new Set());
+  const [hoveredPeriod, setHoveredPeriod] = useState<{
+    period: PeriodData;
+    element: HTMLElement | null;
+  } | null>(null);
 
   const togglePeriod = (periodName: string) => {
     setExpandedPeriods(prev => {
@@ -159,6 +163,20 @@ export default function Home() {
   const days = getDaysInMonth(currentMonth);
   const menuItems = getMenuItems(selectedDate);
 
+  // Function to handle showing the tooltip
+  const showTooltip = (event: React.MouseEvent, period: PeriodData) => {
+    event.stopPropagation();
+    setHoveredPeriod({
+      period,
+      element: event.currentTarget as HTMLElement
+    });
+  };
+
+  // Function to handle hiding the tooltip
+  const hideTooltip = () => {
+    setHoveredPeriod(null);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-8">
       <div className="max-w-7xl mx-auto">
@@ -239,7 +257,7 @@ export default function Home() {
             {days.map((day, index) => (
               <div
                 key={index}
-                className={`p-4 rounded-lg min-h-[120px] cursor-pointer transition-colors backdrop-blur-sm relative ${
+                className={`p-4 rounded-lg min-h-[120px] cursor-pointer transition-colors backdrop-blur-sm relative overflow-visible ${
                   day === selectedDate
                     ? 'bg-gray-800/30 text-white'
                     : day
@@ -247,6 +265,7 @@ export default function Home() {
                     : 'bg-transparent'
                 }`}
                 onClick={() => day && setSelectedDate(day)}
+                style={{ position: 'relative', zIndex: 10 }}
               >
                 {day && (
                   <>
@@ -257,7 +276,7 @@ export default function Home() {
                       {getMenuItems(day).map((period, i) => (
                         <div 
                           key={i}
-                          className={`text-xs p-1 rounded bg-white/30 backdrop-blur-sm transition-colors cursor-pointer relative group ${
+                          className={`text-xs p-1 rounded bg-white/30 backdrop-blur-sm transition-colors cursor-pointer ${
                             period.periodName.toLowerCase().includes('breakfast') 
                               ? 'hover:bg-blue-400/50' 
                               : period.periodName.toLowerCase().includes('lunch')
@@ -266,16 +285,10 @@ export default function Home() {
                               ? 'hover:bg-purple-400/50'
                               : 'hover:bg-orange-400/50'
                           }`}
+                          onMouseEnter={(e) => showTooltip(e, period)}
+                          onMouseLeave={hideTooltip}
                         >
                           {period.periodName}
-                          <div className="absolute left-0 top-full mt-1 w-48 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-2 text-xs opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100]">
-                            {period.stations.map((station, stationIndex) => (
-                              <div key={stationIndex} className="py-1">
-                                <div className="font-semibold text-gray-700">{station.stationName}</div>
-                                <div className="text-gray-600 truncate">{station.items[0]}</div>
-                              </div>
-                            ))}
-                          </div>
                         </div>
                       ))}
                     </div>
@@ -285,6 +298,28 @@ export default function Home() {
             ))}
           </div>
         </div>
+
+        {/* Tooltip component attached to each hovered period box */}
+        {hoveredPeriod && (
+          <div className="fixed inset-0 pointer-events-none z-[9999]">
+            <div 
+              className="absolute bg-white/95 backdrop-blur-md rounded-lg shadow-xl p-3 text-xs border border-gray-200"
+              style={{
+                top: hoveredPeriod.element ? hoveredPeriod.element.getBoundingClientRect().bottom + 5 + 'px' : '0px',
+                left: hoveredPeriod.element ? hoveredPeriod.element.getBoundingClientRect().left + 'px' : '0px',
+                maxWidth: '250px', 
+                minWidth: '200px',
+              }}
+            >
+              {hoveredPeriod.period.stations.map((station, stationIndex) => (
+                <div key={stationIndex} className="py-1 border-b border-gray-100 last:border-0">
+                  <div className="font-semibold text-gray-800">{station.stationName}</div>
+                  <div className="text-gray-600 truncate">{station.items[0]}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="backdrop-blur-sm bg-white/30 rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 backdrop-blur-sm bg-white/30 p-3 rounded-lg">
