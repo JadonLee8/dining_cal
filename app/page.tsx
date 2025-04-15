@@ -180,6 +180,14 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-8">
       <div className="max-w-7xl mx-auto">
+        <a 
+          href="https://jadonlee.dev" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="absolute top-4 left-4 text-gray-600 hover:text-gray-800 transition-colors backdrop-blur-sm bg-white/30 px-4 py-2 rounded-lg"
+        >
+          jadonlee.dev
+        </a>
         <div className="relative w-full max-w-md mx-auto mb-8 h-32">
           <div className="absolute inset-0 overflow-hidden rounded-lg shadow-lg">
             <div className={`absolute inset-0 transition-opacity duration-500 ${selectedLocation === 'SBISA' ? 'opacity-100' : 'opacity-0'}`}>
