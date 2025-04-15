@@ -251,7 +251,7 @@ export default function Home() {
                 {day && (
                   <>
                     <div className="font-semibold mb-2">
-                      {new Date(day).getDate() + 1}
+                      {new Date(day).getUTCDate()}
                     </div>
                     <div className="text-sm">
                       {getMenuItems(day).slice(0, 1).map((station, i) => (
