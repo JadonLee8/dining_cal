@@ -227,7 +227,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-6">
             <button 
               onClick={() => navigateMonth('prev')}
-              className="p-2 rounded-lg hover:bg-white/20 transition-colors backdrop-blur-sm"
+              className="p-2 rounded-lg hover:bg-white/20 transition-colors backdrop-blur-sm bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -238,7 +238,7 @@ export default function Home() {
             </div>
             <button 
               onClick={() => navigateMonth('next')}
-              className="p-2 rounded-lg hover:bg-white/20 transition-colors backdrop-blur-sm"
+              className="p-2 rounded-lg hover:bg-white/20 transition-colors backdrop-blur-sm bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -259,7 +259,7 @@ export default function Home() {
                 key={index}
                 className={`p-4 rounded-lg min-h-[120px] cursor-pointer transition-colors backdrop-blur-sm relative overflow-visible ${
                   day === selectedDate
-                    ? 'bg-gray-800/30 text-white'
+                    ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-md'
                     : day
                     ? 'bg-white/30 hover:bg-white/50'
                     : 'bg-transparent'
