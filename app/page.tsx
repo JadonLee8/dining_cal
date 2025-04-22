@@ -1,5 +1,5 @@
 "use client"
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Import useEffect and useRef
 import diningData from '../public/dining_data.json';
 import Image from 'next/image';
 
@@ -58,6 +58,14 @@ export default function Home() {
     period: PeriodData;
     element: HTMLElement | null;
   } | null>(null);
+  // State to keep track of the pinned tooltip
+  const [pinnedPeriodInfo, setPinnedPeriodInfo] = useState<{
+    date: string;
+    periodName: string;
+    element: HTMLElement | null;
+    periodData: PeriodData; // Store the actual data too
+  } | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null); // Ref for the tooltip element
 
   const togglePeriod = (periodName: string) => {
     setExpandedPeriods(prev => {
@@ -91,6 +99,8 @@ export default function Home() {
       } else {
         newMonth.setMonth(prevMonth.getMonth() + 1);
       }
+      // Close pinned tooltip when navigating months
+      setPinnedPeriodInfo(null);
       return newMonth;
     });
   };
@@ -102,14 +112,14 @@ export default function Home() {
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const firstDayOfMonth = firstDay.getDay();
-    
+
     const days = [];
-    
+
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDayOfMonth; i++) {
       days.push(null);
     }
-    
+
     // Add days of the month
     for (let i = 1; i <= daysInMonth; i++) {
       const currentDate = new Date(year, month, i);
@@ -122,7 +132,7 @@ export default function Home() {
     for (let i = 0; i < remainingDays; i++) {
       days.push(null);
     }
-    
+
     return days;
   };
 
@@ -135,7 +145,7 @@ export default function Home() {
   const getMenuItems = (date: string) => {
     const dayData = (diningData as unknown as DiningData)[date];
     if (!dayData) return [];
-    
+
     const periodData: PeriodData[] = [];
     Object.entries(dayData).forEach(([period, data]) => {
       if (period !== 'periods') {
@@ -163,26 +173,74 @@ export default function Home() {
   const days = getDaysInMonth(currentMonth);
   const menuItems = getMenuItems(selectedDate);
 
-  // Function to handle showing the tooltip
-  const showTooltip = (event: React.MouseEvent, period: PeriodData) => {
+  // Function to handle showing the tooltip on hover
+  const showTooltip = (event: React.MouseEvent, period: PeriodData, date: string) => {
     event.stopPropagation();
-    setHoveredPeriod({
-      period,
-      element: event.currentTarget as HTMLElement
-    });
+    // Only show hover tooltip if nothing is pinned or if the hovered item is not the pinned one
+    if (!pinnedPeriodInfo || (pinnedPeriodInfo.periodName !== period.periodName || pinnedPeriodInfo.date !== date)) {
+      setHoveredPeriod({
+        period,
+        element: event.currentTarget as HTMLElement
+      });
+    }
   };
 
-  // Function to handle hiding the tooltip
+  // Function to handle hiding the tooltip on hover leave
   const hideTooltip = () => {
     setHoveredPeriod(null);
   };
 
+  // Function to handle clicking a period box to pin/unpin tooltip
+  const handlePeriodClick = (event: React.MouseEvent, period: PeriodData, date: string) => {
+    event.stopPropagation(); // Prevent calendar day click if necessary
+    const currentTarget = event.currentTarget as HTMLElement;
+
+    if (pinnedPeriodInfo && pinnedPeriodInfo.date === date && pinnedPeriodInfo.periodName === period.periodName) {
+      // If clicking the already pinned period, unpin it
+      setPinnedPeriodInfo(null);
+    } else {
+      // Otherwise, pin the new period
+      setPinnedPeriodInfo({
+        date: date,
+        periodName: period.periodName,
+        element: currentTarget,
+        periodData: period // Store the period data
+      });
+      setHoveredPeriod(null); // Hide hover tooltip when pinning
+    }
+  };
+
+  // Effect to handle clicks outside the pinned tooltip to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        pinnedPeriodInfo &&
+        tooltipRef.current &&
+        !tooltipRef.current.contains(event.target as Node) &&
+        pinnedPeriodInfo.element &&
+        !pinnedPeriodInfo.element.contains(event.target as Node)
+      ) {
+        // Clicked outside the tooltip AND outside the originating element
+        setPinnedPeriodInfo(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [pinnedPeriodInfo]); // Re-run effect if pinnedPeriodInfo changes
+
+  // Determine which tooltip data to display (pinned takes priority)
+  const displayTooltipData = pinnedPeriodInfo || hoveredPeriod;
+  const isPinned = !!pinnedPeriodInfo;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-8">
       <div className="max-w-7xl mx-auto">
-        <a 
-          href="https://jadonlee.dev" 
-          target="_blank" 
+        <a
+          href="https://jadonlee.dev"
+          target="_blank"
           rel="noopener noreferrer"
           className="absolute top-4 left-4 text-gray-600 hover:text-gray-800 transition-colors backdrop-blur-sm bg-white/30 px-4 py-2 rounded-lg"
         >
@@ -190,7 +248,11 @@ export default function Home() {
         </a>
         <div className="relative w-full max-w-md mx-auto mb-8 h-32">
           <div className="absolute inset-0 overflow-hidden rounded-lg shadow-lg">
-            <div className={`absolute inset-0 transition-opacity duration-500 ${selectedLocation === 'SBISA' ? 'opacity-100' : 'opacity-0'}`}>
+            <div
+              className={`absolute inset-0 transition-opacity duration-500 ${
+                selectedLocation === 'SBISA' ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
               <Image
                 src="/sbisa.png"
                 alt="SBISA"
@@ -199,7 +261,11 @@ export default function Home() {
                 priority
               />
             </div>
-            <div className={`absolute inset-0 transition-opacity duration-500 ${selectedLocation === 'COMMONS' ? 'opacity-100' : 'opacity-0'}`}>
+            <div
+              className={`absolute inset-0 transition-opacity duration-500 ${
+                selectedLocation === 'COMMONS' ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
               <Image
                 src="/commons.png"
                 alt="COMMONS"
@@ -212,7 +278,10 @@ export default function Home() {
           <div className="relative flex items-center justify-center h-full">
             <div className="flex items-center justify-between bg-white/10 backdrop-blur-sm rounded-lg p-1 shadow-lg">
               <button
-                onClick={() => setSelectedLocation('SBISA')}
+                onClick={() => {
+                  setSelectedLocation('SBISA');
+                  setPinnedPeriodInfo(null);
+                }} // Close tooltip on location change
                 className={`relative z-10 px-8 py-2 text-lg font-semibold transition-colors rounded-lg ${
                   selectedLocation === 'SBISA' ? 'bg-white/20 text-white' : 'text-white/80 hover:text-white'
                 }`}
@@ -220,7 +289,10 @@ export default function Home() {
                 SBISA
               </button>
               <button
-                onClick={() => setSelectedLocation('COMMONS')}
+                onClick={() => {
+                  setSelectedLocation('COMMONS');
+                  setPinnedPeriodInfo(null);
+                }} // Close tooltip on location change
                 className={`relative z-10 px-8 py-2 text-lg font-semibold transition-colors rounded-lg ${
                   selectedLocation === 'COMMONS' ? 'bg-white/20 text-white' : 'text-white/80 hover:text-white'
                 }`}
@@ -230,71 +302,98 @@ export default function Home() {
             </div>
           </div>
         </div>
-        
+
         <div className="backdrop-blur-sm bg-white/30 rounded-lg shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
-            <button 
+            <button
               onClick={() => navigateMonth('prev')}
               className="p-2 rounded-lg hover:bg-white/20 transition-colors backdrop-blur-sm"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
               </svg>
             </button>
             <div className="text-xl font-semibold text-gray-800 backdrop-blur-sm bg-white/30 px-4 py-2 rounded-lg">
               {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </div>
-            <button 
+            <button
               onClick={() => navigateMonth('next')}
               className="p-2 rounded-lg hover:bg-white/20 transition-colors backdrop-blur-sm"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             </button>
           </div>
           <div className="grid grid-cols-7 gap-2 mb-4">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center font-semibold text-gray-600 backdrop-blur-sm bg-white/30 p-2 rounded-lg">
+              <div
+                key={day}
+                className="text-center font-semibold text-gray-600 backdrop-blur-sm bg-white/30 p-2 rounded-lg"
+              >
                 {day}
               </div>
             ))}
           </div>
-          
+
           <div className="grid grid-cols-7 gap-2">
             {days.map((day, index) => (
               <div
                 key={index}
-                className={`p-4 rounded-lg min-h-[120px] cursor-pointer transition-colors backdrop-blur-sm relative overflow-visible ${
+                className={`p-4 rounded-lg min-h-[120px] transition-colors backdrop-blur-sm relative overflow-visible ${
                   day === selectedDate
                     ? 'bg-gray-800/30 text-white'
                     : day
-                    ? 'bg-white/30 hover:bg-white/50'
+                    ? 'bg-white/30 hover:bg-white/50 cursor-pointer' // Only add cursor pointer if it's a valid day
                     : 'bg-transparent'
                 }`}
-                onClick={() => day && setSelectedDate(day)}
-                style={{ position: 'relative', zIndex: 10 }}
+                onClick={() => {
+                  if (day) {
+                    setSelectedDate(day);
+                    // Optionally close pinned tooltip when selecting a new date
+                    // setPinnedPeriodInfo(null);
+                  }
+                }}
               >
                 {day && (
                   <>
-                    <div className="font-semibold mb-2">
-                      {new Date(day).getUTCDate()}
-                    </div>
-                    <div className="space-y-1 relative z-30">
+                    <div className="font-semibold mb-2">{new Date(day).getUTCDate()}</div>
+                    <div className="space-y-1 relative z-10">
+                      {/* Ensure period boxes are clickable */}
                       {getMenuItems(day).map((period, i) => (
-                        <div 
+                        <div
                           key={i}
                           className={`text-xs p-1 rounded bg-white/30 backdrop-blur-sm transition-colors cursor-pointer ${
-                            period.periodName.toLowerCase().includes('breakfast') 
-                              ? 'hover:bg-blue-400/50' 
+                            period.periodName.toLowerCase().includes('breakfast')
+                              ? 'hover:bg-blue-400/50'
                               : period.periodName.toLowerCase().includes('lunch')
                               ? 'hover:bg-green-400/50'
                               : period.periodName.toLowerCase().includes('dinner')
                               ? 'hover:bg-purple-400/50'
                               : 'hover:bg-orange-400/50'
+                          } ${
+                            // Add visual indicator if this period is pinned
+                            pinnedPeriodInfo?.date === day && pinnedPeriodInfo?.periodName === period.periodName
+                              ? 'ring-2 ring-offset-1 ring-blue-500'
+                              : ''
                           }`}
-                          onMouseEnter={(e) => showTooltip(e, period)}
+                          onMouseEnter={e => showTooltip(e, period, day)} // Pass day here
                           onMouseLeave={hideTooltip}
+                          onClick={e => handlePeriodClick(e, period, day)} // Use new click handler
                         >
                           {period.periodName}
                         </div>
@@ -307,24 +406,63 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tooltip component attached to each hovered period box */}
-        {hoveredPeriod && (
-          <div className="fixed inset-0 pointer-events-none z-[9999]">
-            <div 
-              className="absolute bg-white/95 backdrop-blur-md rounded-lg shadow-xl p-3 text-xs border border-gray-200"
+        {/* Tooltip component - Renders based on pinned or hovered state */}
+        {displayTooltipData && displayTooltipData.element && (
+          <div ref={tooltipRef} className="fixed inset-0 pointer-events-none z-[9999]">
+            {/* Added ref here */}
+            <div
+              className={`absolute bg-white/95 backdrop-blur-md rounded-lg shadow-xl p-3 text-xs border border-gray-200 ${
+                isPinned ? 'pointer-events-auto' : ''
+              }`} // Allow pointer events only if pinned
               style={{
-                top: hoveredPeriod.element ? hoveredPeriod.element.getBoundingClientRect().bottom + 5 + 'px' : '0px',
-                left: hoveredPeriod.element ? hoveredPeriod.element.getBoundingClientRect().left + 'px' : '0px',
-                maxWidth: '250px', 
-                minWidth: '200px',
+                top: displayTooltipData.element.getBoundingClientRect().bottom + 5 + 'px',
+                left: displayTooltipData.element.getBoundingClientRect().left + 'px',
+                maxWidth: '250px',
+                minWidth: '200px'
               }}
             >
-              {hoveredPeriod.period.stations.map((station, stationIndex) => (
-                <div key={stationIndex} className="py-1 border-b border-gray-100 last:border-0">
-                  <div className="font-semibold text-gray-800">{station.stationName}</div>
-                  <div className="text-gray-600 truncate">{station.items[0]}</div>
-                </div>
-              ))}
+              {/* Add a close button if the tooltip is pinned */}
+              {isPinned && (
+                <button
+                  onClick={() => setPinnedPeriodInfo(null)}
+                  className="absolute top-1 right-1 p-0.5 bg-gray-200/50 hover:bg-gray-300/70 rounded-full text-gray-600 z-10"
+                  // Ensure button is clickable
+                  aria-label="Close tooltip"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-3 h-3"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+              {/* Access period data correctly based on pinned or hovered */}
+              {(isPinned
+                ? pinnedPeriodInfo!.periodData
+                : (displayTooltipData as { period: PeriodData }).period
+              ).stations.map(
+                (station: StationItems, stationIndex: number) => (
+                  <div
+                    key={stationIndex}
+                    className={`py-1 border-b border-gray-100 last:border-0 ${
+                      isPinned ? 'pt-4' : ''
+                    }`}
+                  >
+                    {/* Add padding top if pinned and close button exists */}
+                    <div className="font-semibold text-gray-800">{station.stationName}</div>
+                    <div className="text-gray-600 truncate">{station.items[0]}</div>
+                    {/* You could add more items here if needed */}
+                    {/* {station.items.slice(1, 3).map((item, idx) => (
+                    <div key={idx} className="text-gray-500 text-xs pl-2 truncate">{item}</div>
+                  ))} */}
+                  </div>
+                )
+              )}
             </div>
           </div>
         )}
@@ -380,7 +518,10 @@ export default function Home() {
                           {expandedStations.has(station.stationName) && (
                             <div className="space-y-2 pl-4">
                               {station.items.map((item, itemIndex) => (
-                                <div key={itemIndex} className="p-3 bg-white/30 rounded-lg backdrop-blur-sm hover:bg-white/50 transition-colors">
+                                <div
+                                  key={itemIndex}
+                                  className="p-3 bg-white/30 rounded-lg backdrop-blur-sm hover:bg-white/50 transition-colors"
+                                >
                                   {item}
                                 </div>
                               ))}
