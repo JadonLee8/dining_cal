@@ -303,6 +303,11 @@ export default function Home() {
           </div>
         </div>
 
+        <div className="flex items-center justify-center text-center w-full my-3">
+          oop, menu might not be accurate anymore due to periodic updates from api end. Automatic refetch coming soon!
+        </div>
+
+
         <div className="backdrop-blur-sm bg-white/30 rounded-lg shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <button
